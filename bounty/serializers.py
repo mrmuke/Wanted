@@ -3,6 +3,10 @@ from rest_framework import serializers
 from users.serializers import UserSerializer
 class GetBountySerializer(serializers.ModelSerializer):
 	user=UserSerializer()
+	num_active = serializers.SerializerMethodField('get_active')
+
+	def active(self, obj):
+		return ActiveBounty.objects.filter(user=self.request.user.id).count()
 	class Meta:
 		model = Bounty
 		fields = "__all__"
@@ -18,7 +22,6 @@ class ActiveBountySerializer(serializers.ModelSerializer):
 		fields = "__all__"
 
 class GetActiveBountySerializer(serializers.ModelSerializer):
-	bounty=GetBountySerializer()
 	class Meta:
 		model = ActiveBounty
 		fields = "__all__"

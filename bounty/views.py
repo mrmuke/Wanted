@@ -4,6 +4,7 @@ from .serializers import ActiveBountySerializer, BountySerializer, GetActiveBoun
 from rest_framework import generics, permissions,status
 from rest_framework.response import Response
 
+from users.models import User,Profile
 # Create your views here.
 class CreateBounty(generics.CreateAPIView):
     permission_classes = [
@@ -33,30 +34,73 @@ class StartBounty(generics.CreateAPIView):
     ]
     def post(self, request, *args, **kwargs):
         request.data["user"]=request.user.id
+        if(ActiveBounty.objects.filter(user=self.request.user.id).count()==Bounty.objects.get(id==request.data.bounty)):
+            return Resposne("Bounty full")
         serializer=ActiveBountySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class GetActiveBounties(generics.ListAPIView):
+class GetActiveBounty(generics.ListAPIView):
     permission_classes = [
         permissions.IsAuthenticated
     ]
     def get(self, request,*args, **kwargs):
 
-        queryset = ActiveBounty.objects.filter(user=request.user.id)
+        queryset = ActiveBounty.objects.get(user=request.user.id)
 
-        serializer=GetActiveBountySerializer(queryset,many=True)
+        serializer=GetActiveBountySerializer(queryset)
         return Response(serializer.data)
 
-class StartWorkingActive(generics.UpdateAPIView):
+class StartActiveBounty(generics.UpdateAPIView):
     permission_classes = [
         permissions.IsAuthenticated
     ]
     def put(self, request,*args, **kwargs):
 
-        bounty=ActiveBounty.objects.get(user=request.user.id,bounty=request.data["bounty"])
+        bounty=ActiveBounty.objects.get(user=request.user.id)
         bounty.started=True
         bounty.save()
         return Response("Bounty Started")
+
+
+class SubmitActiveBounty(generics.UpdateAPIView):
+    permission_classes = [
+        permissions.IsAuthenticated
+    ]
+    def put(self, request,*args, **kwargs):
+
+        bounty=ActiveBounty.objects.get(user=request.user.id)
+        bounty.review=True
+        bounty.save()
+        serializer=ActiveBountySubmissionSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+        return Response("Bounty Submitted")
+
+class ApproveActiveBounty(generics.UpdateAPIView):
+    permission_classes = [
+        permissions.IsAuthenticated
+    ]
+    def put(self, request,*args, **kwargs):
+
+        activeBounty=ActiveBounty.objects.get(user=request.user.id)
+        activeBounty.completed=True
+        activeBounty.save()
+        b=Bounty.objects.get(id=activeBounty.bounty)
+        profile=Profile.objects.get(user=request.data.user)
+        profile.balance+=b.amount
+        profile.save()
+        return Response("Bounty Completed")
+
+class DenyActiveBounty(generics.UpdateAPIView):
+    permission_classes = [
+        permissions.IsAuthenticated
+    ]
+    def put(self, request,*args, **kwargs):
+
+        bounty=ActiveBounty.objects.get(user=request.user.id)
+        bounty.review=False
+        bounty.save()
+        return Response("Bounty Denied")
