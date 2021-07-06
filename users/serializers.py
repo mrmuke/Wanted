@@ -3,6 +3,7 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 User._meta.get_field('email')._unique = True
+
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model=Profile
@@ -20,13 +21,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
-        
         user = User.objects.create_user(
             validated_data['username'],
             validated_data['email'],
             validated_data['password'],
         )
-        
         return user
 
 

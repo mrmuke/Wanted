@@ -12,6 +12,7 @@ class Profile(models.Model):
     balance=models.PositiveIntegerField(default=0)
     bio=models.CharField(max_length=300,default="")
 @receiver(post_save, sender=User)
+
 def update_profile_signal(sender, instance, created, **kwargs):
     if created:     
         Profile.objects.create(user=instance)
