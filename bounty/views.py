@@ -11,7 +11,6 @@ class CreateBounty(generics.CreateAPIView):
     permission_classes = [
         permissions.IsAuthenticated
     ]
-
     def post(self, request, *args, **kwargs):
         request.data["user"]=request.user.id
         serializer=BountySerializer(data=request.data)
@@ -40,7 +39,9 @@ class StartBounty(generics.CreateAPIView):
         serializer=ActiveBountySerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            serializer=GetActiveBountySerializer(data=request.data)
+            if serializer.is_valid():
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class GetActiveBounty(generics.ListAPIView):
@@ -61,10 +62,11 @@ class CancelActiveBounty(generics.DestroyAPIView):
         permissions.IsAuthenticated
     ]
     def delete(self,request):
-        profile=Profile.objects.get(user=request.user)
-        profile.balance-=500
-        profile.save()
         ActiveBounty.objects.get(user=request.user.id).delete()
+        profile=Profile.objects.get(user=request.user)
+        profile.balance+=500
+        profile.save()
+        
         return Response()
 class StartActiveBounty(generics.UpdateAPIView):
     permission_classes = [
