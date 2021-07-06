@@ -88,13 +88,14 @@ class SubmitActiveBounty(generics.CreateAPIView):
         active=ActiveBounty.objects.get(user=request.user.id)
         #hompage show approval
         image_file=ContentFile(base64.b64decode(url),name=f"submission-{active.id}.jpeg")
+        print(image_file)
         data["photo"]=image_file
         active.review=True
         active.save()
         serializer=ActiveBountySubmissionSerializer(data=data)
         if serializer.is_valid():
-            serializer.save()
-        return Response("Bounty Submitted")
+             return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ApproveActiveBounty(generics.UpdateAPIView):
     permission_classes = [

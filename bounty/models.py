@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
-
+def nameFile(instance, filename):
+    return '/'.join(['bounty_submissions',filename])
 class Bounty(models.Model):
 	user = models.ForeignKey(User, on_delete=models.CASCADE)
 	amount=models.PositiveIntegerField(default=0)
@@ -17,7 +18,7 @@ class Bounty(models.Model):
 
 class ActiveBountySubmission(models.Model):
 	text=models.CharField(max_length=500)
-	photo = models.ImageField(upload_to='bounty_submission/')
+	photo = models.ImageField(upload_to=nameFile,blank=True,null=True)
 
 class ActiveBounty(models.Model):
 	user = models.ForeignKey(User, on_delete=models.CASCADE)
