@@ -17,7 +17,7 @@ class Bounty(models.Model):
 
 class ActiveBountySubmission(models.Model):
 	text=models.CharField(max_length=500)
-	photo = models.ImageField(upload_to='bounty_submission')
+	photo = models.ImageField(upload_to='bounty_submission/')
 
 class ActiveBounty(models.Model):
 	user = models.ForeignKey(User, on_delete=models.CASCADE)
