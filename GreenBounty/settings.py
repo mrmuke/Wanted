@@ -41,8 +41,8 @@ INSTALLED_APPS = [
     'knox',
     'corsheaders',
     'users.apps.UsersConfig',
+    'wante',
     'bounty'
-
 ]
 
 MIDDLEWARE = [
@@ -75,7 +75,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'GreenBounty.wsgi.application'
+WSGI = 'GreenBounty.WSGI.application'
 
 
 # Database
