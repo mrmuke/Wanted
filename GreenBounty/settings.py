@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'knox',
     'corsheaders',
     'users.apps.UsersConfig',
-    'bounty'
+    'bounty',
+    'channels'
 
 ]
 
@@ -140,3 +141,5 @@ from datetime import timedelta
 REST_KNOX = {
   'TOKEN_TTL': timedelta(days=90),
 }
+
+ASGI_APPLICATION = "GreenBounty.asgi.application"

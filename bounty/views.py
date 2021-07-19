@@ -6,6 +6,8 @@ from rest_framework.response import Response
 import base64
 from users.models import User,Profile
 from django.core.files.base import ContentFile
+from transport_co2 import estimate_co2
+import math
 # Create your views here.
 class CreateBounty(generics.CreateAPIView):
     permission_classes = [
@@ -24,10 +26,12 @@ class GetBounties(generics.ListAPIView):
     permission_classes = [
         permissions.IsAuthenticated
     ]
-    def get(self, *args, **kwargs):
-        queryset = Bounty.objects.all()
+    def get(self, request,*args, **kwargs):
+        queryset = Bounty.objects.all()#exclude(user=request.user.id)
         serializer=GetBountySerializer(queryset,many=True)
         return Response(serializer.data)
+
+
 class StartBounty(generics.CreateAPIView):
     permission_classes = [
         permissions.IsAuthenticated
@@ -55,6 +59,27 @@ class GetActiveBounty(generics.ListAPIView):
 
         except ActiveBounty.DoesNotExist:
             return Response({"msg":"No Active Bounty"})
+class GetAwaitingApproval(generics.ListAPIView):
+    permission_classes = [
+        permissions.IsAuthenticated
+    ]
+    def get(self, request,*args, **kwargs):
+        user_bounties = Bounty.objects.filter(user=request.user)
+        submissions=[]
+        for bounty in user_bounties:
+            active=ActiveBounty.objects.filter(bounty=bounty.id)
+            for a in active:
+                try:
+                    submission=ActiveBountySubmission.objects.get(activeBounty=a.id)
+                    submissions.append(submission)
+                except ActiveBountySubmission.DoesNotExist:
+                    submission = None
+                
+
+        serializer=ActiveBountySubmissionSerializer(submissions,many=True)        
+        return Response(serializer.data)
+
+
 class CancelActiveBounty(generics.DestroyAPIView):
     permission_classes = [
         permissions.IsAuthenticated
@@ -76,7 +101,22 @@ class StartActiveBounty(generics.UpdateAPIView):
         bounty.started=True
         bounty.save()
         return Response("Bounty Started")
+def getTravelEmissions(distance):
+    emissions={}
+    emissions["car"]=estimate_co2(mode="car", distance_in_km=distance)
+    emissions["transit"]=estimate_co2(mode="transit",distance_in_km=distance)
+    
+    #cutting 4% of a full grown tree
+    percentage=emissions["car"]/1000/252
+    if(percentage>1):
+        percentage=math.ceil(percentage)
+    emissions["car-trees"]=percentage
+    percentage=emissions["transit"]/1000/252
+    if(percentage>1):
+        percentage=math.ceil(percentage)
+    emissions["transit-trees"]=percentage
 
+    return emissions
 
 class SubmitActiveBounty(generics.CreateAPIView):
     permission_classes = [
@@ -86,27 +126,26 @@ class SubmitActiveBounty(generics.CreateAPIView):
         data=request.data
         url=data["photo"]
         active=ActiveBounty.objects.get(user=request.user.id)
-        #hompage show approval
         image_file=ContentFile(base64.b64decode(url),name=f"submission-{active.id}.jpeg")
         print(image_file)
         data["photo"]=image_file
-        active.review=True
+        active.review=True        
+        
+        ActiveBountySubmission.objects.create(photo=data["photo"],text=data["text"],activeBounty=active.id)
+        
         active.save()
-        serializer=ActiveBountySubmissionSerializer(data=data)
-        if serializer.is_valid():
-             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response("Submitted", status=status.HTTP_201_CREATED)
 
 class ApproveActiveBounty(generics.UpdateAPIView):
     permission_classes = [
         permissions.IsAuthenticated
     ]
     def put(self, request,*args, **kwargs):
-
-        activeBounty=ActiveBounty.objects.get(user=request.user.id)
+        ActiveBountySubmission.objects.get(activeBounty=self.kwargs["id"]).delete()
+        activeBounty=ActiveBounty.objects.get(id=self.kwargs["id"])
         activeBounty.completed=True
         activeBounty.save()
-        b=Bounty.objects.get(id=activeBounty.bounty)
+        b=Bounty.objects.get(id=activeBounty.bounty.id)
         profile=Profile.objects.get(user=request.data.user)
         profile.balance+=b.amount
         profile.save()
@@ -117,8 +156,9 @@ class DenyActiveBounty(generics.UpdateAPIView):
         permissions.IsAuthenticated
     ]
     def put(self, request,*args, **kwargs):
+        ActiveBountySubmission.objects.get(activeBounty=self.kwargs["id"]).delete()
 
-        bounty=ActiveBounty.objects.get(user=request.user.id)
+        bounty=ActiveBounty.objects.get(id=self.kwargs["id"])
         bounty.review=False
         bounty.save()
         return Response("Bounty Denied")
