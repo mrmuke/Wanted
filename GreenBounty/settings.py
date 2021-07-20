@@ -42,7 +42,9 @@ INSTALLED_APPS = [
     'corsheaders',
     'users.apps.UsersConfig',
     'wante',
-    'bounty'
+    'bounty',
+    'channels'
+
 ]
 
 MIDDLEWARE = [
@@ -140,3 +142,5 @@ from datetime import timedelta
 REST_KNOX = {
   'TOKEN_TTL': timedelta(days=90),
 }
+
+ASGI_APPLICATION = "GreenBounty.asgi.application"
