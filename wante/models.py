@@ -18,5 +18,6 @@ class Wante(models.Model):
     where=models.CharField(max_length=1000)
     why=models.CharField(max_length=1000)
     date=models.DateField()
+    theme=models.CharField(max_length=1000)
     image = models.ImageField(upload_to=nameFile, blank=True, null=True)
     

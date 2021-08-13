@@ -4,6 +4,7 @@ from .models import Wante
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
 from django.contrib.auth.models import User
+from users.models import Profile
 from django.core.files.base import ContentFile
 import base64
 import json
@@ -55,7 +56,8 @@ class getAmountPostData(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        print(request.data["pages"])
+        userdata = User.objects.get(username=request.user)
+        balance = int(Profile.objects.get(user_id=userdata.pk).balance)
         allWante = Wante.objects.all()[:request.data["pages"]]
         arr = []
         for obj in allWante:
@@ -64,4 +66,22 @@ class getAmountPostData(generics.GenericAPIView):
             serialized_obj["user"] = User.objects.get(pk=userid).username
             arr.append(serialized_obj)
 
-        return HttpResponse(json.dumps({"data":arr}))
+        return HttpResponse(json.dumps({"data":arr, "balance":balance}))
+
+class makeDonationsAPIView(generics.GenericAPIView):
+    serializer_class = WanteSerializers
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+
+        wante = Wante.objects.get(pk=request.data["donationID"])
+        serialized_obj = WanteSerializers(wante).data
+        wante.collected = int(serialized_obj["collected"] + request.data["donationAmount"])
+        wante.save(update_fields=["collected"])
+
+        userdata = User.objects.get(username=request.user)
+        userProfile = Profile.objects.get(user_id=userdata.pk)
+        remains = int(userProfile.balance) - request.data["donationAmount"]
+        userProfile.balance = remains
+        userProfile.save(update_fields=["balance"])
+        return HttpResponse("Transaction Complete!")
