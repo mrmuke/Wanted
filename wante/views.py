@@ -79,9 +79,24 @@ class makeDonationsAPIView(generics.GenericAPIView):
         wante.collected = int(serialized_obj["collected"] + request.data["donationAmount"])
         wante.save(update_fields=["collected"])
 
+        # get user profile
         userdata = User.objects.get(username=request.user)
         userProfile = Profile.objects.get(user_id=userdata.pk)
+        
+        # update user balance
         remains = int(userProfile.balance) - request.data["donationAmount"]
         userProfile.balance = remains
-        userProfile.save(update_fields=["balance"])
+
+        # update user json
+        if(userProfile.json == None):
+            x = '{"' + wante.theme + '":' + str(request.data["donationAmount"]) + '}'
+            jsonData = json.loads(x)
+            userProfile.json = jsonData
+        else:
+            if(wante.theme in userProfile.json):
+                userProfile.json[wante.theme] = userProfile.json[wante.theme] + request.data["donationAmount"]
+            else:
+                userProfile.json[wante.theme] = request.data["donationAmount"]
+
+        userProfile.save()
         return HttpResponse("Transaction Complete!")
